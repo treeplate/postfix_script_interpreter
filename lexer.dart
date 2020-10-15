@@ -14,7 +14,7 @@ enum TokenType {
 
   // Keywords.                                     
   AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,  
-  PRINT, SUPER, TRUE, VAR, WHILE, RETURN, NEWLINE, LOCAL,
+  PRINT, SUPER, TRUE, VAR, WHILE, RETURN, NEWLINE, LOCAL, SCOPE,
 
   EOF                                              
 }
@@ -66,6 +66,7 @@ class Scanner {
     "return": TokenType.RETURN,
     "newline": TokenType.NEWLINE,
     "local": TokenType.LOCAL,
+    "scope": TokenType.SCOPE,
 
     // Winnie-the-Pooh keywords
 

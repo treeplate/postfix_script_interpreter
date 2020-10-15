@@ -37,6 +37,7 @@ final List<Statement> funs = [
   FunDecl("readfile", ["x"], (Scope scope) {
     return File(scope.getVar("x")).readAsStringSync();
   }),
+  FunDecl("init", [], (Scope scope) {}),
   FunDecl("parsenum", ["x"], (Scope scope) {
     dynamic x = scope.getVar("x");
     return double.parse(x);
@@ -105,6 +106,9 @@ Statement parseLine(TokenGetter tokens) {
       //print("VAR");
       tokens.advance();
       return LAssignmentStatement.parse(tokens);
+    case TokenType.SCOPE:
+      tokens.advance();
+      return ScopeStatement.parse(tokens);
     case TokenType.RETURN:
       //print("RETURN");
       tokens.advance();
@@ -278,12 +282,12 @@ class VE extends Expression {
 }
 
 class Instance {
-  static var nextid = 0;
-  Instance(this.name, Class iClass, Scope parent): id = nextid, scope = Scope("instance${nextid}_$name", parent) {
+  static Map<Class, int> classes = {};
+  Instance(this.name, Class iClass, Scope parent): id = classes[iClass] ?? 0, scope = Scope("instance${classes[iClass] ?? 0}_$name", parent) {
     Block nB = iClass.block.copy();
     nB.runners.insert(0, LAssignmentStatement("this", VE(this), "N/A"));
     nB.setup(parent);
-    nextid++;
+    classes[iClass] = (classes[iClass] ?? 0) + 1;
     //print(scope);
     nB.run(parent);
     scope = nB.blockScope;
@@ -376,6 +380,38 @@ class Scope {
   dynamic _getVar(String name) => vars[name] ?? parent?._getVar(name);
 
   dynamic getVar(String name) => _getVar(name) ?? (throw UnimplementedError("No $name exists on $this ${this.vars}"));
+}
+
+class ScopeStatement extends Statement{
+  ScopeStatement(this.a, this.b, this.block);
+  final IdentifierExpression a;
+  final Expression b;
+  final Block block;
+  String debugPrint() => "TODO";
+  dynamic run(Scope scope) {
+    Scope x = Scope("scope_statement_scope", b.eval(scope).scope);
+    x.addVar(a.name, a.eval(scope), "TODO");
+    block.setup(x);
+    block.run();
+  }
+  factory ScopeStatement.parse(TokenGetter tokens) {
+    //print("parseExpressioning#3");
+    IdentifierExpression first = IdentifierExpression(tokens.advance().lexeme);
+    Expression second = parseExpression(tokens);
+    if(tokens.peek().type != TokenType.LEFT_BRACE) {
+      print("no LB, ${tokens.peek().type} [line ${tokens.peek().line}]");
+      throw UnimplementedError();
+    }
+    tokens.advance();
+    List<Statement> block = [];
+    while(tokens.peek().type != TokenType.RIGHT_BRACE) {
+      //print("Please...");
+      block.add(parseLine(tokens));
+    }
+    tokens.advance();
+    //print("End while");
+    return ScopeStatement(first,second, Block(block, "scope_statement"));  
+  }
 }
 
 class WhileStatement extends Statement{
