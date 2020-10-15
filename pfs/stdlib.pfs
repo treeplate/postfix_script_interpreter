@@ -1,0 +1,106 @@
+//fun init() {}
+
+fun whiley(funcy, whilery) {
+  if funcy() {
+    whilery(funcy, whilery);
+  }
+}
+
+fun whiler(funcy) { // deprecated
+  whiley(funcy, whiley);
+}
+
+class LinkedList {
+  local head = nil;
+  local tail = nil;
+
+  fun init() {}
+
+  fun add(item) {
+    if head == nil {
+      var head = ListItem();
+      var tail = head;
+      head.setup(item);
+    } else {
+      var tail = tail.append(item);
+    }
+  }
+
+  fun remove(listitem) {
+    if (listitem == head) {
+      var head = head.next;
+      if (head == nil) {
+        var tail = nil;
+      } else {
+        head.setPrev(nil);
+      }
+    } else {
+      if (listitem == tail) {
+        listitem.prev.setNext(nil);
+        var tail = listitem.prev;
+      } else {
+        listitem.prev.setNext(listitem.next);
+        listitem.next.setPrev(listitem.prev);
+      }
+    }
+    listitem.setNext(nil);
+    listitem.setPrev(nil);
+  }
+
+  fun toStr() {
+    return "["+$head+"]";
+  }
+
+  fun isNotEmpty() {
+    return head != nil;
+  }
+
+  fun unshift() {
+    local result = head;
+    var head = head.next;
+    if head == nil {
+      var tail = nil;
+    } else {
+      head.setPrev(nil);
+    }
+    return result.value;
+  }
+}
+
+class ListItem {
+  local value = nil;
+  local next = nil;
+  local prev = nil;
+
+  fun init() {}
+
+  fun setup(ival) {
+    var value = ival;
+  }
+
+  fun setNext(newNext) {
+    var next = newNext;
+  }
+
+  fun setPrev(newPrev) {
+    var prev = newPrev;
+  }
+
+  fun append(ival) {
+    var next = ListItem();
+    next.setup(ival);
+    next.setPrev(this);
+    return next;
+  }
+
+  fun toStr() {
+    if next == nil {
+      return $value;
+    }
+    return $value + ", " + $next;
+  }
+}
+
+fun loudly(msg) {
+  print $msg;
+}

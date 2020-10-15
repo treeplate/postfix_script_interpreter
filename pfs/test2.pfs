@@ -1,0 +1,14 @@
+class A {
+  local x;
+  fun init() { }
+  fun setX(value) { var x = value; }
+}
+
+local a = A();
+a.setX(1);
+while (a.x == 1) {
+  local a = A();
+  a.setX(2);
+  print("TWO: " + $(a.x));
+}
+print("SHOULD NOT REACH HERE");

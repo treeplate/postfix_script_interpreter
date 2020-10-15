@@ -1,0 +1,73 @@
+class Conversion {
+  var value,
+  fun setValue(newValue) {
+    var value = newValue
+  }
+  fun toStr() {
+    return $(value) + " K: to be converted"
+  }
+}
+
+class Temperature {
+  var value, // kelvin
+  fun setValue(newValue) {
+    var value = newValue
+  }
+  fun toStr() {
+    return $(value) + " K"
+  }
+  fun plus(a) {
+    return (value + a.value) K
+  }
+}
+
+fun C(value) {
+  if (type(value) = Conversion) {
+    if (type(value.value) = Temperature) {
+      return $((value.value).value - 273.15) + " C"
+    }
+    return false
+  }
+  var result = Temperature(),
+  result.setValue(value + 273.15),
+  return result
+}
+
+fun F(value) {
+  if (type(value) = Conversion) {
+    if (type(value.value) = Temperature) {
+      // next line is bogus and causes mysterious error:
+      //return $((value.value).value - 273.15) * 9/5 + 32 + " F"
+      // real code should be the next line:
+      return $(((value.value).value - 273.15) * 9/5 + 32) + " F"
+    }
+    return false
+  }
+  var result = Temperature(),
+  result.setValue(((value - 32) * 5/9) + 273.15),
+  return result
+}
+
+fun K(value) {
+  if (type(value) = Conversion) {
+    if (type(value.value) = Temperature) {
+      return $((value.value).value) + " K"
+    }
+    return false
+  }
+  var result = Temperature(),
+  result.setValue(value),
+  return result
+}
+
+fun in(value) {
+  var x = Conversion(),
+  x.setValue(value)
+  return x
+}
+
+print -40C
+print 233.15K
+print -40F
+
+print 21C in F

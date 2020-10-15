@@ -1,0 +1,244 @@
+class Quantity {
+  local amount = nil;
+  local name = nil;
+  fun init() {}
+  fun setup(aName, anAmount) {
+    var name = aName;
+    var amount = anAmount;
+  }
+  fun increaseAmount(newAmount) {
+    var amount = amount + newAmount;
+  }
+  fun decreaseAmount(newAmount) {
+    var amount = amount - newAmount;
+  }
+  fun toStr() {
+    return $amount + "x " + $name;
+  }
+}
+
+class Recipe {
+  local inputs = nil;
+  local output = nil;
+  fun init() {
+    var inputs = LinkedList();
+  }
+  fun addInput(quantity) {
+    inputs.add(quantity);
+  }
+  fun setOutput(value) {
+    var output = value;
+  }
+  fun toStr() {
+    if (inputs == nil) {
+      return "UNINITIALIZED RECIPE"
+    }
+    return $(inputs.head) + " => " + $output;
+  }
+}
+
+class Recipes {
+  local _list = nil;
+  fun init() {
+    var _list = LinkedList();
+  }
+  fun add(recipe) {
+    _list.add(recipe);
+  }
+  fun toStr() {
+    return "Recipes(" + $_list + ")";
+  }
+  fun findRecipeFor(name) {
+    local result = nil;
+    local item = _list.head;
+    fun searchLoop() {
+      if item == nil {
+        return false;
+      }
+      if (item.value).output.name == name {
+        return false;
+      }
+      var item = item.next;
+      return true;
+    }
+    whiler(searchLoop);
+    if item != nil {
+      return item.value;
+    }
+    return nil;
+  }
+}
+
+fun parseRecipes(input) {
+  if length(input) < 1 {
+    return false;
+  }
+  local state = 0
+  // states:
+  // 0 = input number
+  // 1 = input name
+  // 2 = comma before input number
+  // 3 = arrow
+  // 4 = output number
+  // 5 = output name
+  local result = Recipes();
+  local recipe = Recipe();
+  local position = 0;
+  local buffer1 = "";
+  local buffer2 = "";
+  local c
+  fun parserLoop() {
+    var c = index(input, position);
+    if state == 0 {
+      if c == " " {
+        var state = 1;
+      } else {
+        var buffer1 = buffer1 + c;
+      }
+    } else { 
+      if state == 1 {
+        fun saveInput() {
+          local quantity = Quantity();
+          quantity.setup(buffer2, parsenum(buffer1));
+          recipe.addInput(quantity);
+          var buffer1 = "";
+          var buffer2 = "";
+        }
+        if c == " " {
+          var state = 3;
+          saveInput();
+        } else {
+          if c == "," {
+            var state = 2;
+            saveInput();
+          } else {
+            var buffer2 = buffer2 + c;
+          }
+        }
+      } else {
+        if (state == 2) {
+          if c == " " {
+            var state = 0;
+          } else {
+            print "No space after comma";
+            return false;
+          }
+        } else {
+          if (state == 3) {
+            if c == " " {
+              var state = 4;
+            }
+          } else {
+            if (state == 4) {
+              if c == " " {
+                var state = 5;
+              } else {
+                var buffer1 = buffer1 + c;
+              }
+            } else {
+              if state == 5 {
+                if c == newline {
+                  var state = 0;
+                  local quantity = Quantity();
+                  quantity.setup(buffer2, parsenum(buffer1));
+                  recipe.setOutput(quantity);
+                  result.add(recipe);
+                  var recipe = Recipe();
+                  var buffer1 = "";
+                  var buffer2 = "";
+                } else {
+                  var buffer2 = buffer2 + c;
+                }
+              } else {
+                print "ERR: Invalid state";
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+    var position = position + 1;
+    return position < length(input);
+  }
+  whiler(parserLoop);
+  return result;
+}
+
+print("Parsing...");
+local raw = readfile("pfs/aoc.inp");
+local recipes = parseRecipes(raw);
+//print(recipes);
+
+local needs = LinkedList();
+local target = Quantity();
+target.setup("FUEL", 1);
+needs.add(target);
+
+local haves = LinkedList();
+
+local requirements = LinkedList();
+
+print("Building...");
+while needs.isNotEmpty() {
+  local target = needs.unshift();
+  local recipe = recipes.findRecipeFor(target.name); // if nil, this is a goal
+  if recipe == nil {
+    local item = requirements.head;
+    while item != nil and item.value.name != target.name {
+      var item = item.next;
+    }
+    if item != nil {
+      item.value.increaseAmount(target.amount);
+    } else {
+      requirements.add(target);
+    }
+  } else {
+    // Check if we have some already
+    local item = haves.head;
+    while item != nil and item.value.name != target.name {
+      var item = item.next;
+    }
+    if item != nil {
+      // we have some in the buffer, use it
+      if target.amount >= item.value.amount {
+        // need all of it
+        haves.remove(item);
+        target.decreaseAmount(item.value.amount);
+        var item = nil;
+      } else {
+        item.value.decreaseAmount(target.amount);
+      }
+    }
+    if item == nil {
+      // we don't have it (or need more), make it
+      local neededCopies = ceil(target.amount / recipe.output.amount);
+      local generated = neededCopies * recipe.output.amount;
+      if generated > target.amount {
+        local quantity = Quantity();
+        quantity.setup(target.name, generated - target.amount);
+        haves.add(quantity);
+      }
+      local item = recipe.inputs.head;
+      while item != nil {
+        local ingredient = item.value;
+        local amount = ingredient.amount * neededCopies;
+        local search = needs.head;
+        while (search != nil and search.value.name != ingredient.name) {
+          var search = search.next;
+        }
+        if search == nil {
+          local quantity = Quantity();
+          quantity.setup(ingredient.name, 0);
+          needs.add(quantity);
+          var search = needs.tail;
+        }
+        search.value.increaseAmount(amount);
+        var item = item.next;
+      }
+    }
+  }
+}
+
+print("Requirements: " + $requirements);
+print("Extras: " + $haves);
