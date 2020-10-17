@@ -40,7 +40,7 @@ Some statements can be followed by a comma to indicate the end of the statement.
 #### Print
 
 ```
-print <expr>,
+print <expr>;
 ```
 
 Prints the result of evaluating <expr> to the console.
@@ -57,7 +57,7 @@ Evaluates the expression. If the result is true, runs the first block, otherwise
 #### Assignment
 
 ```
-var <identifier> = <expr>,
+var <identifier> = <expr>;
 ```
 
 Assigns the result of evaluating the given expression to the variable with the given identifier.
@@ -87,7 +87,7 @@ print foo // prints 0.0
 #### Return
 
 ```
-return <expr>,
+return <expr>;
 ```
 
 Causes the nearest enclosing function execution to be interrupted, returning the value of the given expression.
