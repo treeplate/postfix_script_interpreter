@@ -364,10 +364,14 @@ class Scope {
     vars.addAll(scope?.vars ?? {});
   }
 
-  String addPar(String name, dynamic value) {
+  String addPar(String name, dynamic value, [Scope debugChild]) {
     if(vars[name] == null) {
       //print("$debugName(${describe()}) > ${parent.describe()}");
-      parent.addPar(name, value);
+      if(parent == null) { 
+      if(debugChild != null) return "ERR: No existing variable '$name' when setting variable";
+      throw UnimplementedError("No existing variable '$name' when setting variable (${describe()})"); 
+      }
+      print(parent.addPar(name, value));
     } else {
       vars[name] = value;
     }
@@ -556,7 +560,8 @@ class PrintStatement extends Statement {
   final Expression expr;
   void run(Scope scope) {
     //print("printin' $expr");
-    print(expr.eval(scope));
+    var result = expr.eval(scope);
+    print(result is double ? result.round() == result ? result.toString().substring(0, result.toString().length-2) : result.toString() : result.toString());
   }
   factory PrintStatement.parse(TokenGetter tokens) {
     //print("parseExpressioning#4");
@@ -766,7 +771,7 @@ class EqualsExpression extends Expression {
   bool eval(Scope scope) => a.eval(scope) == b.eval(scope);
   static Expression parse(TokenGetter tokens) {
     var a = LessExpression.parse(tokens);
-    if(tokens.peek().type != TokenType.EQUAL_EQUAL) {
+    if(tokens.peek().type != TokenType.EQUAL_EQUAL && tokens.peek().type != TokenType.EQUAL) {
       //print("not EQUAL: ${tokens.peek().type}");
       return a;
     }
@@ -992,7 +997,7 @@ class FunCallExpression extends Expression {
     }
     return null;
   }
-  String debugPrint() => "${a.debugPrint()}(${args.map((Expression expr) => expr.debugPrint()).join(", ")})";
+  String debugPrint() => "funcallexpr: ${a.debugPrint()}(${args.map((Expression expr) => expr.debugPrint()).join(", ")})";
   String toString() => debugPrint();
 }
 
@@ -1033,6 +1038,7 @@ Expression parseGroup(TokenGetter tokens) {
   tokens.advance();
   //print("parseExpressioning#2");
   var result = parseExpression(tokens);
+  print("DEBUG: $result");
   if(tokens.peek().type != TokenType.RIGHT_PAREN) {
     //print("no RIGHT_PAREN, ${tokens.peek().type}");
     throw UnimplementedError("No right parenteses on line ${tokens.peek().line}");

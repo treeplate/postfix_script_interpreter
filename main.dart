@@ -3,7 +3,7 @@ import 'lexer.dart';
 import 'parser.dart';
 
 void main(List<String> args) {
-  if(args.length == 0) args = ["pfs/test"];
+  if(args.length == 0) args = ["pfs/file"];
   Map<String, String> files = filer(args[0]);
   run(files);
 }

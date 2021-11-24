@@ -57,10 +57,11 @@ class Scanner {
     "if": TokenType.IF,                        
     "nil": TokenType.NIL,                       
     "or": TokenType.OR,    
+    
     "and": TokenType.AND,                    
     "print": TokenType.PRINT,                   
     "super": TokenType.SUPER,                         
-    "true": TokenType.TRUE,                      
+    "true": TokenType.TRUE,                       
     "var": TokenType.VAR,     
     "while": TokenType.WHILE, 
     "return": TokenType.RETURN,

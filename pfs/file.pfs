@@ -1,5 +1,5 @@
 class Conversion {
-  var value,
+  var value;
   fun setValue(newValue) {
     var value = newValue
   }
@@ -9,7 +9,7 @@ class Conversion {
 }
 
 class Temperature {
-  var value, // kelvin
+  var value; // kelvin
   fun setValue(newValue) {
     var value = newValue
   }
@@ -28,8 +28,8 @@ fun C(value) {
     }
     return false
   }
-  var result = Temperature(),
-  result.setValue(value + 273.15),
+  var result = Temperature();
+  result.setValue(value + 273.15);
   return result
 }
 
@@ -43,8 +43,8 @@ fun F(value) {
     }
     return false
   }
-  var result = Temperature(),
-  result.setValue(((value - 32) * 5/9) + 273.15),
+  var result = Temperature();
+  result.setValue(((value - 32) * 5/9) + 273.15);
   return result
 }
 
@@ -55,13 +55,13 @@ fun K(value) {
     }
     return false
   }
-  var result = Temperature(),
-  result.setValue(value),
+  var result = Temperature();
+  result.setValue(value);
   return result
 }
 
 fun in(value) {
-  var x = Conversion(),
+  var x = Conversion();
   x.setValue(value)
   return x
 }

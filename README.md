@@ -1,6 +1,12 @@
 # PostFix Script
 A language whose main feature is postfix functions.
 
+# Bug reporting
+
+Report an error/feature request at [the New Issue Github page](https://github.com/treeplate/postfix_script_interpreter/issues/new)
+
+View what is happening with your issues in [my language flow](https://github.com/treeplate/postfix_script_interpreter/projects/1)
+
 # Introduction
 
 PostFixScript is a dynamically typed language with structured record types.
@@ -31,7 +37,7 @@ Values can be null, true, false, doubles, strings, functions, or instances of cl
 
 ### Statements
 
-#### Statement blocks (<block>)
+#### Statement blocks `(<block>)`
 
 A statement block is a list of statements. There are several kinds of statements, each listed in this section.
 
@@ -72,7 +78,7 @@ fun test() {
   var foo = 1
 }
 test()
-print foo // prints 1.0
+print foo // prints 1
 ```
 
 ```
@@ -81,7 +87,7 @@ fun test() {
 }
 var foo = 0
 test()
-print foo // prints 0.0
+print foo // prints 0
 ```
 
 #### Return
@@ -170,7 +176,7 @@ There are various forms of expressions. They are processed in the order listed i
 
 #### Function invocations
 
-##### Prefix syntax
+##### Postfix syntax
 
 ```
 <expr> <identifier>
