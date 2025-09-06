@@ -34,17 +34,7 @@ class Token {
 
 typedef Print = void Function(String message);
 
-class Scanner {  
-  bool hadError = false;
-
-  void error(int line, String message) {           
-    report(line, "", message);                            
-  }
-
-  void report(int line, String where, String message) {
-    print("[line $line file $file] Error" + where + ": " + message);
-    hadError = true;          
-  }
+class Scanner {
 
   final String source;                                   
   final List<Token> tokens = [];  
@@ -150,9 +140,7 @@ class Scanner {
           number();
         } else if (isAlpha(c)) {                   
           identifier();                                
-        } else {                                   
-          error(line, "Unexpected character $c.");
-        } 
+        }
       break;                                 
     }                                            
   }
@@ -204,8 +192,7 @@ class Scanner {
     }
 
     // Unterminated string.                                 
-    if (isAtEnd()) {                                        
-      error(line, "Unterminated string.");              
+    if (isAtEnd()) {             
       return;                                               
     }                                                       
 

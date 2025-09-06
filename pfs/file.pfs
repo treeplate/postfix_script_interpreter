@@ -1,73 +1,33 @@
-class Conversion {
-  var value;
-  fun setValue(newValue) {
-    var value = newValue
-  }
-  fun toStr() {
-    return $(value) + " K: to be converted"
-  }
+import 'dart:io';
+import 'lexer.dart';
+import 'parser.dart';
+
+fun main() {
+  var files = filer("pfs/file");
+  run(files);
 }
 
-class Temperature {
-  var value; // kelvin
-  fun setValue(newValue) {
-    var value = newValue
+fun filer(file) {
+  var result = {};
+  for(String file in File("$file.inc").readAsLinesSync()) {
+    result.addAll((filer(file)));
   }
-  fun toStr() {
-    return $(value) + " K"
-  }
-  fun plus(a) {
-    return (value + a.value) K
-  }
+  result[file] = (File("$file.pfs").readAsStringSync());
+  return result;
 }
 
-fun C(value) {
-  if (type(value) = Conversion) {
-    if (type(value.value) = Temperature) {
-      return $((value.value).value - 273.15) + " C"
-    }
-    return false
+fun run(sources) {    
+  var allTokens = [];
+  var scanner;
+  for (MapEntry<String, String> source in sources.entries) {
+    //print(source);
+    scanner = new Scanner(source.value, print, source.key);    
+    var tokens = scanner.scanTokens();
+    allTokens+=(tokens);
   }
-  var result = Temperature();
-  result.setValue(value + 273.15);
-  return result
+  allTokens.add(new Token(TokenType.EOF, "", null, scanner.line, scanner.file));
+  //print(allTokens);      
+  parse(allTokens);                                  
 }
 
-fun F(value) {
-  if (type(value) = Conversion) {
-    if (type(value.value) = Temperature) {
-      // next line is bogus and causes mysterious error:
-      //return $((value.value).value - 273.15) * 9/5 + 32 + " F"
-      // real code should be the next line:
-      return $(((value.value).value - 273.15) * 9/5 + 32) + " F"
-    }
-    return false
-  }
-  var result = Temperature();
-  result.setValue(((value - 32) * 5/9) + 273.15);
-  return result
-}
-
-fun K(value) {
-  if (type(value) = Conversion) {
-    if (type(value.value) = Temperature) {
-      return $((value.value).value) + " K"
-    }
-    return false
-  }
-  var result = Temperature();
-  result.setValue(value);
-  return result
-}
-
-fun in(value) {
-  var x = Conversion();
-  x.setValue(value)
-  return x
-}
-
-print -40C
-print 233.15K
-print -40F
-
-print 21C in F
+main();

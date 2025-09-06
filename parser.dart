@@ -10,7 +10,11 @@ void parse(List<Token> tokens) {
   }
   //print(Block(program, "dbg").debugPrint());
   print("Running...");
+  try {
   Block(funs + program, "root")..setup()..run();
+  } on Return catch(e) {
+    print("=> ${e.value}");
+  }
 }
 
 
@@ -139,7 +143,7 @@ Statement parseClassLine(TokenGetter tokens) {
       tokens.advance();
       return LAssignmentStatement.parse(tokens);
     default:
-      throw UnimplementedError("[line ${tokens.peek().line}] Unrecognized token ${tokens.peek().type} in class declaration");
+      tokens.advance();
   }
 }
 
@@ -164,20 +168,20 @@ class AssignmentStatement extends Statement {
   String name;
   Expression value;
   factory AssignmentStatement.parse(TokenGetter tokens) {
-    if(tokens.peek().type != TokenType.IDENTIFIER) throw UnimplementedError("No name after VAR");
-    var name = tokens.peek().lexeme;
+    String name = tokens.peek().lexeme;
+
     tokens.advance();
     if(tokens.peek().type != TokenType.EQUAL) {
       if(tokens.peek().type == TokenType.SEMICOLON) tokens.advance();
       return AssignmentStatement(name, NullExpression());
     }
     tokens.advance();
-    var value = parseExpression(tokens);
+    Expression value = parseExpression(tokens);
     if(tokens.peek().type == TokenType.SEMICOLON) tokens.advance();
     return AssignmentStatement(name, value);
   }
   void run(Scope scope) {
-    var to = value.eval(scope);
+    Object to = value.eval(scope);
     //print("at $scope: var $name = $to");
     scope?.addPar(name, to);
   }
@@ -190,20 +194,19 @@ class LAssignmentStatement extends Statement {
   String line;
   Expression value;
   factory LAssignmentStatement.parse(TokenGetter tokens) {
-    if(tokens.peek().type != TokenType.IDENTIFIER) throw UnimplementedError("No name after LOCAL");
-    var name = tokens.peek().lexeme;
+    String name = tokens.peek().lexeme;
     tokens.advance();
     if(tokens.peek().type != TokenType.EQUAL) {
       if(tokens.peek().type == TokenType.SEMICOLON) tokens.advance();
       return LAssignmentStatement(name, NullExpression(), tokens.peek().line);
     }
     tokens.advance();
-    var value = parseExpression(tokens);
+    Expression value = parseExpression(tokens);
     if(tokens.peek().type == TokenType.SEMICOLON) tokens.advance();
     return LAssignmentStatement(name, value, tokens.peek().line);
   }
   void run(Scope scope) {
-    var to = value.eval(scope);
+    Object to = value.eval(scope);
     //print("at $scope: var $name = $to");
     scope?.addVar(name, to, line);
   }
@@ -223,7 +226,6 @@ class Block extends Statement {
   int id;
   dynamic run([Scope scope]) {
     blockScope = Scope(name, parentSetupScope);
-    if(blockScope == null) throw UnimplementedError("Not setupped yet");
     for (var i = 0; i < runners.length; i++) {
       //print("block: ${i+1}th ran ${blockScope} (from $scope) thing(${runners[i].runtimeType})");
       //print(" ");
@@ -303,9 +305,6 @@ class Instance {
     if(fun == null) {
       return null;
     }
-    if(fun.args.length != args.length) {
-      throw("Wrong num' of arg's $n: exp: ${args.length}: got: ${fun.args.length}");
-    }
     //print("calling $name#$id.$n w/ $args <");
     for (int i = 0; i < args.length; i++) {
       //print("  arg<");
@@ -326,18 +325,16 @@ class Instance {
       //print("  >\n>\n");
     } on Return catch(r) {
       return r.value as T;
-    } catch(e, st) {
-      throw UnimplementedError("$st(calling $name with ${scope.vars})$e");
     }
     return null;
   }
   Scope scope;
   final String name;
-  operator +(dynamic other) => callFun("plus", [other]) ?? (throw UnimplementedError("No valid + on $name"));
-  operator -(dynamic other) => callFun("minus", [other]) ?? (throw UnimplementedError("No valid - on $name"));
-  operator -()              => callFun("negate", []) ?? (throw UnimplementedError("No valid unary - on $name"));
-  operator *(dynamic other) => callFun("times", [other]) ?? (throw UnimplementedError("No valid * on $name"));
-  operator /(dynamic other) => callFun("div", [other]) ?? (throw UnimplementedError("No valid / on $name"));
+  operator +(dynamic other) => callFun("plus", [other]) ?? ("ADDED");
+  operator -(dynamic other) => callFun("minus", [other]) ?? ("MINUSED");
+  operator -()              => callFun("negate", []) ?? ("0-ED");
+  operator *(dynamic other) => callFun("times", [other]) ?? ("TIMESED");
+  operator /(dynamic other) => callFun("div", [other]) ?? ("DIVIDED");
   operator ==(dynamic other) => callFun("equals", [other]) ?? super == other;
   String toString() => callFun<String>("toStr", []) ?? "$name#$id";
 }
@@ -349,8 +346,7 @@ class Scope {
   String toString() => describe();
   final Scope parent;
   Map<String, dynamic> vars = {};
-  String addVar(String name, dynamic value, String line) { 
-   if(vars[name] != null) throw UnimplementedError("Duplicate local $name [line $line]");
+  String addVar(String name, dynamic value, String line) {
    vars[name] = value;
    return "XXX";
   }
@@ -367,11 +363,12 @@ class Scope {
   String addPar(String name, dynamic value, [Scope debugChild]) {
     if(vars[name] == null) {
       //print("$debugName(${describe()}) > ${parent.describe()}");
-      if(parent == null) { 
-      if(debugChild != null) return "ERR: No existing variable '$name' when setting variable";
-      throw UnimplementedError("No existing variable '$name' when setting variable (${describe()})"); 
+      if(parent == null) {
+        vars[name] = value; 
+        if(debugChild != null) return "ERR: No existing variable '$name' when setting variable";
+        return "NEVERR-SETVAR$name";
       }
-      print(parent.addPar(name, value));
+      parent.addPar(name, value);
     } else {
       vars[name] = value;
     }
@@ -383,7 +380,7 @@ class Scope {
 
   dynamic _getVar(String name) => vars[name] ?? parent?._getVar(name);
 
-  dynamic getVar(String name) => _getVar(name) ?? (throw UnimplementedError("No $name exists on $this ${this.vars}"));
+  dynamic getVar(String name) => _getVar(name) ?? "<nonex>$name";
 }
 
 class ScopeStatement extends Statement{
@@ -402,10 +399,6 @@ class ScopeStatement extends Statement{
     //print("parseExpressioning#3");
     IdentifierExpression first = IdentifierExpression(tokens.advance().lexeme);
     Expression second = parseExpression(tokens);
-    if(tokens.peek().type != TokenType.LEFT_BRACE) {
-      print("no LB, ${tokens.peek().type} [line ${tokens.peek().line}]");
-      throw UnimplementedError();
-    }
     tokens.advance();
     List<Statement> block = [];
     while(tokens.peek().type != TokenType.RIGHT_BRACE) {
@@ -432,10 +425,6 @@ class WhileStatement extends Statement{
   factory WhileStatement.parse(TokenGetter tokens) {
     //print("parseExpressioning#3");
     Expression boolean = parseExpression(tokens);
-    if(tokens.peek().type != TokenType.LEFT_BRACE) {
-      print("no LB, ${tokens.peek().type} [line ${tokens.peek().line}]");
-      throw UnimplementedError();
-    }
     tokens.advance();
     List<Statement> block = [];
     while(tokens.peek().type != TokenType.RIGHT_BRACE) {
@@ -467,10 +456,6 @@ class IfStatement extends Statement{
   factory IfStatement.parse(TokenGetter tokens) {
     //print("parseExpressioning#3");
     Expression boolean = parseExpression(tokens);
-    if(tokens.peek().type != TokenType.LEFT_BRACE) {
-      print("no LB, ${tokens.peek().type} [line ${tokens.peek().line}]");
-      throw UnimplementedError();
-    }
     tokens.advance();
     List<Statement> block = [];
     List<Statement> elseblock = [];
@@ -481,10 +466,6 @@ class IfStatement extends Statement{
     tokens.advance();
     if(tokens.peek().type == TokenType.ELSE) {
       tokens.advance();
-      if(tokens.peek().type != TokenType.LEFT_BRACE) {
-        //print("no LB, ${tokens.peek().type}");
-        throw UnimplementedError("no left brace after 'else' line ${tokens.peek().line}");
-      }
       tokens.advance();
       while(tokens.peek().type != TokenType.RIGHT_BRACE) {
         //print("Please...");
@@ -503,15 +484,8 @@ class ClassStatement extends Statement {
   Scope get scope => block.blockScope;
   final String name; 
   factory ClassStatement.parse(TokenGetter tokens) {
-    if(tokens.peek().type != TokenType.IDENTIFIER) {
-      throw UnimplementedError("No name near 'CLASS'");
-    }
     var name = tokens.advance().lexeme;
     //print("LOOKYER: a ${tokens.peek().type}");
-    if(tokens.peek().type != TokenType.LEFT_BRACE) {
-      //print("no LB, ${tokens.peek().type}");
-      throw UnimplementedError('NO "{" NEAR "class $name"');
-    }
     tokens.advance();
     List<Statement> block = [];
     while(tokens.peek().type != TokenType.RIGHT_BRACE) {
@@ -580,14 +554,9 @@ class FunDeclStatement extends Statement{
   String debugPrint() => "\u001b[33mfun\u001b[0m $name(${args.join(", ")}) {\n${fun.debugPrint()}\n}";
   factory FunDeclStatement.parse(TokenGetter tokens) {
     //print("LOOKYMCLOOK: a ${tokens.peek().type}");
-    if(tokens.peek().type != TokenType.IDENTIFIER) {
-      throw UnimplementedError("No name near 'FUN', ${tokens.peek().line}, ${tokens.peek().type}");
-    }
     var name = tokens.advance().lexeme;
     //print("$name.LOOKYER: a ${tokens.peek().type}");
-    if(tokens.advance().type != TokenType.LEFT_PAREN) {
-      throw UnimplementedError("NO \"(\" NEAR $name");
-    }
+    tokens.advance();
     //print("$name.LOOKYEREL: a ${tokens.peek().type}");
     var args = <String>[];
     while(true) {
@@ -605,10 +574,6 @@ class FunDeclStatement extends Statement{
         break;
       }
       tokens.advance();
-    }
-    if(tokens.peek().type != TokenType.LEFT_BRACE) {
-      //print("[line ${tokens.peek().line}] $name.no LB, ${tokens.peek().type}");
-      throw UnimplementedError('NO "{" NEAR "fun $name(${args.join(', ')}) [line ${tokens.peek().line}]"');
     }
     tokens.advance();
     List<Statement> block = [];
@@ -650,7 +615,7 @@ Expression parseExpression(TokenGetter tokens) {
 class IdentifierExpression extends Expression {
   final String name;
   IdentifierExpression(this.name);
-  dynamic eval(Scope scope) => scope.getVar(name);
+  dynamic eval(Scope scope) => scope?.getVar(name) ?? "idnt$name";
   String debugPrint() => "$name";
   String toString() => "$name";
 }
@@ -681,12 +646,19 @@ class TokenGetter {
   final List<Token> tokens;
   TokenGetter(this.tokens);
   Token peek() {
+    if(isAtEnd()) {
+      return Token(TokenType.EOF, "Eof", 0, -1, "doesn't matter");
+    }
     return tokens[current];
   }
   bool isAtEnd() {         
     return current >= tokens.length;
   }
-  Token advance() {                               
+  Token advance() {
+    if(isAtEnd()) {                         
+      current++;
+      return Token(TokenType.EOF, "Eof", 0, -1, "doesn't matter");
+    }                         
     current++;
     //print(tokens[current - 1].lexeme);                                           
     return tokens[current - 1];              
@@ -711,11 +683,18 @@ class OrExpression extends Expression {
   String debugPrint() => "${a.debugPrint()} || ${b.debugPrint()}";
 }
 
+Object goodAnd(Object a, Object b) {
+  if(a is String) {
+    return a + b.toString();
+  }
+  return a && b;
+}
+
 class AndExpression extends Expression {
   AndExpression(this.a, this.b);
   final Expression a;
   final Expression b;
-  bool eval(Scope scope) => a.eval(scope) && b.eval(scope);
+  Object eval(Scope scope) => goodAnd(a.eval(scope), b.eval(scope));
   static Expression parse(TokenGetter tokens) {
     var a = NotEqualsExpression.parse(tokens);
     if(tokens.peek().type != TokenType.AND) {
@@ -738,11 +717,14 @@ class DotExpression extends Expression {
   }
   String debugPrint() => instance.debugPrint() + "." + getter.debugPrint();
   dynamic eval(Scope scope) {
-    var evaluation = instance.eval(scope);
+    Object evaluation = instance.eval(scope);
     if(!(evaluation is Instance || evaluation is Class)) {
-      //print("${instance.debugPrint()} is a ${evaluation.runtimeType}");
+      evaluation = Class(Block([], "ldot"));
     }
-    return getter.eval(evaluation?.scope);
+    if(evaluation is Class) {
+      evaluation = (evaluation as Class).block;
+    }
+    return getter.eval(evaluation is Block ? evaluation.blockScope : (evaluation as dynamic)?.scope);
   }
 }
 
@@ -787,7 +769,7 @@ class LessExpression extends Expression {
   LessExpression(this.a, this.b);
   final Expression a;
   final Expression b;
-  bool eval(Scope scope) => a.eval(scope) < b.eval(scope);
+  bool eval(Scope scope) => goodLT(a.eval(scope), b.eval(scope));
   static Expression parse(TokenGetter tokens) {
     var a = LessEqualExpression.parse(tokens);
     if(tokens.peek().type != TokenType.LESS) {
@@ -819,11 +801,39 @@ class LessEqualExpression extends Expression {
   String debugPrint() => "${a.debugPrint()} <= ${b.debugPrint()}";
 }
 
+bool goodGT(Object a, Object b) {
+  if(a is String) {
+    return goodGT(a.codeUnits.first,b);
+  }
+  if(b is String) {
+    return goodGT(a, b.codeUnits.first);
+  }
+  if(a == null) return false;
+  if(b == null) return true;
+  return a as dynamic > b;
+}
+
+bool goodLT(Object a, Object b) {
+  if(a is String) {
+    return goodLT(a.codeUnits.first, b);
+  }
+  if(b is String) {
+    return goodLT(a, b.codeUnits.first);
+  }
+  if(a is bool) {
+    return goodLT(a?"T":"F", b);
+  }
+  if(b is bool) {
+    return goodLT(a, b?"T":"F");
+  }
+  return a as dynamic < b;
+}
+
 class GreaterExpression extends Expression { 
   GreaterExpression(this.a, this.b);
   final Expression a;
   final Expression b;
-  bool eval(Scope scope) => a.eval(scope) > b.eval(scope);
+  bool eval(Scope scope) => goodGT(a.eval(scope), b.eval(scope));
   static Expression parse(TokenGetter tokens) {
     var a = GreaterEqualExpression.parse(tokens);
     if(tokens.peek().type != TokenType.GREATER) {
@@ -855,11 +865,18 @@ class GreaterEqualExpression extends Expression {
   String debugPrint() => "${a.debugPrint()} >= ${b.debugPrint()}";
 }
 
+dynamic betterAdd(dynamic a, dynamic b) {
+  if(a is String) {
+    return a + b.toString();
+  }
+  return a+b;
+}
+
 class PlusExpression extends Expression {
   PlusExpression(this.a, this.b);
   final Expression a;
   final Expression b;
-  dynamic eval(Scope scope) => a.eval(scope) + b.eval(scope);
+  dynamic eval(Scope scope) => betterAdd(a.eval(scope), b.eval(scope));
   static Expression parse(TokenGetter tokens) {
     var a = MinusExpression.parse(tokens);
     if(tokens.peek().type != TokenType.PLUS) {
@@ -891,11 +908,25 @@ class MinusExpression extends Expression {
   String debugPrint() => "${a.debugPrint()} - ${b.debugPrint()}";
 }
 
+dynamic betterTimes(Object a, Object b) {
+  if(b is String && a is! String) {
+    return betterTimes(b, a);
+  }
+  if(a is String && b is String) {
+    return betterTimes(int.tryParse(a), int.tryParse(b));
+  }
+  if(a == null) {
+    return "NT$b";
+  }
+  print("$a x $b");
+  return (a as dynamic) * b;
+}
+
 class TimesExpression extends Expression {
   TimesExpression(this.a, this.b);
   final Expression a;
   final Expression b;
-  dynamic eval(Scope scope) => a.eval(scope) * (a.eval(scope) is String ? (b.eval(scope) as double).round() :b.eval(scope));
+  dynamic eval(Scope scope) => betterTimes(a.eval(scope), b.eval(scope));
   static Expression parse(TokenGetter tokens) {
     var a = DivExpression.parse(tokens);
     if(tokens.peek().type != TokenType.STAR) {
@@ -929,16 +960,7 @@ class DivExpression extends Expression {
 
 Expression parsePost(TokenGetter tokens) {
   var value = FunCallExpression.parse(tokens);
-  if(tokens.peek().type != TokenType.IDENTIFIER) {
-    return value;
-  }
-  var x = FunCallExpression(IdentifierExpression(tokens.peek().lexeme), [value]);
-  tokens.advance();
-  while(tokens.peek().type == TokenType.IDENTIFIER) {
-    x = FunCallExpression(IdentifierExpression(tokens.peek().lexeme), [x]);
-    tokens.advance();
-  }
-  return x;
+  return value;
 }
 
 class FunCallExpression extends Expression {
@@ -964,36 +986,32 @@ class FunCallExpression extends Expression {
       //print("FunCallExpression at ${tokens.peek().type}");
     }
     //print("$a...${tokens.peek().type}");
-    if(tokens.peek().type != TokenType.RIGHT_PAREN) throw UnimplementedError("NO ')' after funcall args(${tokens.peek().type})");
     tokens.advance();
     return FunCallExpression(a, args);
   }
   dynamic eval(Scope scope) {
-    var fun = a.eval(scope);
+    Object fun = a.eval(scope);
     //print(fun.block);
-    if(fun == null) print("Function ${a.debugPrint()} does not exist");
-    if(!(fun is Fun)) print("${a.debugPrint()} is a ${fun.runtimeType}");
-    if(fun?.args?.length != args.length && fun != null) {
-      throw("Wrong number of arguments for ${a.debugPrint()}: exp: ${fun.args.length}: got: ${args.length}");
-    }
+
     //print(a.toString() + "........" + fun.toString());
     //print(args.toString() + ":" + fun.args.toString());
+    if(fun is! Fun) {
+        fun = Fun(Block([], "$fun"), List.generate(args.length, (x) => "${fun}arg$x"));
+        (fun as Fun).block.parentSetupScope = Scope("$fun's parentSetupScope", scope);
+      }
     for (int i = 0; i < args.length; i++) {
       //print(i);
-
-      fun.block.parentSetupScope
-      .vars[fun.args[i]] =
+      (fun as Fun).block.parentSetupScope
+      .vars[(fun as Fun).args[i]] =
       (args ?? List(i+1))[i].eval(scope);
     }
     try {
-      var result = fun?.block?.run(scope);
+      var result = (fun as Fun)?.block?.run(scope);
       //print("calling $name(${args.join(", ")}); got $result");
       return result;
     } on Return catch(r) {
       //print("got ${r.value}");
       return r.value;
-    } on NoSuchMethodError catch(e,st) {
-      throw UnimplementedError("(calling ${a.debugPrint()} with ${scope.vars})$e$st");
     }
     return null;
   }
@@ -1038,11 +1056,6 @@ Expression parseGroup(TokenGetter tokens) {
   tokens.advance();
   //print("parseExpressioning#2");
   var result = parseExpression(tokens);
-  print("DEBUG: $result");
-  if(tokens.peek().type != TokenType.RIGHT_PAREN) {
-    //print("no RIGHT_PAREN, ${tokens.peek().type}");
-    throw UnimplementedError("No right parenteses on line ${tokens.peek().line}");
-  }
   tokens.advance();
   return result;
 
@@ -1068,8 +1081,7 @@ Expression parseValue(TokenGetter tokens) {
     case TokenType.NEWLINE:
       return StringExpression("\n");
     default:
-      print("[line ${tokens.peek().line}] Unexpected ${tokens.peek().lexeme}");
-      throw UnimplementedError();
+      return StringExpression("BADTOKEN(${tokens.peek().lexeme})");
   }
 }
 
@@ -1077,6 +1089,12 @@ class NullExpression extends Expression {Nil eval(Scope _) => nil;}
 
 class Nil { 
   String toString() => "nil";
+  operator +(dynamic other) {
+    return "NIL+$other";
+  }
+  operator -(dynamic other) {
+    return "NIL-$other";
+  }
 }
 
 final Nil nil = Nil(); 
